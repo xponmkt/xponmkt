@@ -130,6 +130,11 @@ code{font-family:monospace;font-size:10px;color:var(--blue);background:#eef2ff;p
       <div class="pill" data-g="eixo" onclick="setEixo('Ciberseguranca',this)" style="font-size:10.5px">Ciberseguranca</div>
       <div class="pill" data-g="eixo" onclick="setEixo('Infraestrutura e Redes',this)" style="font-size:10.5px">Infra &amp; Redes</div>
       <div class="pill" data-g="eixo" onclick="setEixo('Servicos',this)" style="font-size:10.5px">Servicos</div>
+      <div class="pill" data-g="eixo" onclick="setEixo('custom',this)" style="font-size:10.5px">Personalizado</div>
+      <div class="pill" data-g="eixo" onclick="setEixo('none',this)" style="font-size:10.5px">Nenhum</div>
+    </div>
+    <div id="eixo-custom-wrap" style="display:none;margin-top:6px">
+      <input type="text" id="eixo-custom-in" placeholder="Texto do eixo..." oninput="S.eixoCustom=this.value;render()">
     </div>
   </div>
   <div class="sb-sec">
@@ -141,6 +146,40 @@ code{font-family:monospace;font-size:10px;color:var(--blue);background:#eef2ff;p
       <div class="pill" data-g="sub" onclick="setSub(44,this)">44px</div>
     </div>
   </div>
+  <div class="sb-sec">
+    <div class="sb-label">Espacamento entre blocos</div>
+    <div class="fg"><label class="fl">Logo → Eixo <span id="lv-logoTag">32</span>px</label>
+      <input type="range" min="8" max="64" step="8" value="32" oninput="S.gap.logoTag=+this.value;document.getElementById('lv-logoTag').textContent=this.value;render()"></div>
+    <div class="fg"><label class="fl">Eixo → Headline <span id="lv-tagHL">32</span>px</label>
+      <input type="range" min="8" max="64" step="8" value="32" oninput="S.gap.tagHL=+this.value;document.getElementById('lv-tagHL').textContent=this.value;render()"></div>
+    <div class="fg"><label class="fl">Headline → Separador <span id="lv-hlSep">24</span>px</label>
+      <input type="range" min="0" max="64" step="8" value="24" oninput="S.gap.hlSep=+this.value;document.getElementById('lv-hlSep').textContent=this.value;render()"></div>
+    <div class="fg"><label class="fl">Separador → Subtitulo <span id="lv-sepSub">24</span>px</label>
+      <input type="range" min="0" max="64" step="8" value="24" oninput="S.gap.sepSub=+this.value;document.getElementById('lv-sepSub').textContent=this.value;render()"></div>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-label">Imagem de fundo</div>
+    <div class="fg">
+      <label class="fl">Upload (PNG/JPG)</label>
+      <input type="file" accept="image/*" onchange="loadBgImg(this)" style="font-size:11px;padding:4px 0;border:none;background:none">
+    </div>
+    <div class="fg" id="bg-opacity-wrap" style="display:none">
+      <label class="fl">Opacidade <span id="lv-bgOp">35</span>%</label>
+      <input type="range" min="5" max="100" step="5" value="35" oninput="S.bgOpacity=this.value/100;document.getElementById('lv-bgOp').textContent=this.value;render()">
+      <button class="rm-btn" onclick="S.bgImg=null;document.getElementById('bg-opacity-wrap').style.display='none';render()" style="margin-top:4px">Remover fundo</button>
+    </div>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-label">Imagens sobrepostas</div>
+    <div class="fg">
+      <label class="fl">Adicionar imagem (logo cliente, foto)</label>
+      <input type="file" accept="image/*" onchange="addOverlay(this)" style="font-size:11px;padding:4px 0;border:none;background:none">
+    </div>
+    <div id="overlays-list"></div>
+  </div>
+
   <hr>
   <div class="sb-sec">
     <div class="sb-label">Briefing para IA</div>
@@ -255,7 +294,13 @@ const TH={
 };
 const DS={PAD:80,G32:32,G24:24,G16:16,HL_FEED:82,HL_STORY:96,HL_SQ:76,TAG:11,FOOT:15};
 
-const S={fmt:'feed',theme:'light',eixo:'Colaboracao',cur:0,subSize:28,animType:'fadein',
+const S={fmt:'feed',theme:'light',eixo:'Colaboracao',eixoCustom:'',cur:0,subSize:28,animType:'fadein',
+  // spacing: gaps between sections (multiples of 8px grid)
+  gap:{logoTag:32,tagHL:32,hlSep:24,sepSub:24,subMicro:24},
+  // overlay images [{img,x,y,w,opacity,id}]
+  overlays:[],
+  // background image
+  bgImg:null, bgOpacity:0.35,
   slides:[
     {h:'Headline principal.',b:'Subtitulo que ancora o problema do decisor em uma ou duas linhas.',m:''},
     {h:'O ponto central.',b:'Desenvolvimento com dado concreto ou contexto tecnico que valida a afirmacao.',m:''},
@@ -304,8 +349,9 @@ function rr(x,cx,cy,w,h,r){
 function drawSlide(idx,xc,W,H){
   const th=TH[S.theme];const sl=S.slides[idx]||S.slides[0];
   const P=DS.PAD;const isStory=S.fmt==='story';
+  const G=S.gap;
 
-  // BG
+  // BG SOLID/GRADIENT
   if(th.bg){xc.fillStyle=th.bg;xc.fillRect(0,0,W,H);}
   if(S.theme==='dark'){
     const g=xc.createLinearGradient(0,0,W,H);
@@ -318,6 +364,18 @@ function drawSlide(idx,xc,W,H){
     g.addColorStop(0,'rgba(245,158,11,0.20)');g.addColorStop(1,'transparent');
     xc.fillStyle=g;xc.fillRect(0,0,W,H);
   }
+
+  // BG IMAGE (over solid, under content)
+  if(S.bgImg&&S.bgImg.complete&&S.bgImg.naturalHeight>0){
+    const bi=S.bgImg;
+    const scale=Math.max(W/bi.naturalWidth,H/bi.naturalHeight);
+    const bw=Math.round(bi.naturalWidth*scale),bh=Math.round(bi.naturalHeight*scale);
+    const bx=Math.round((W-bw)/2),by=Math.round((H-bh)/2);
+    xc.save();xc.globalAlpha=S.bgOpacity;
+    xc.drawImage(bi,bx,by,bw,bh);
+    xc.restore();
+  }
+
   if(th.topBar){
     const b=xc.createLinearGradient(0,0,W,0);
     b.addColorStop(0,'#0e1daa');b.addColorStop(1,'#4da4c7');
@@ -331,19 +389,21 @@ function drawSlide(idx,xc,W,H){
   const lH=62,lW=Math.round(lH*(840.28/334.31));
   if(logo&&logo.complete&&logo.naturalHeight>0)
     xc.drawImage(logo,Math.round((W-lW)/2),y,lW,lH);
-  y+=lH+DS.G32;
+  y+=lH+G.logoTag;
 
-  // EIXO TAG
-  const tagTxt=S.eixo.toUpperCase();
-  xc.font='700 '+DS.TAG+'px "Space Grotesk"';
-  xc.letterSpacing='0.2em';
-  const tW=xc.measureText(tagTxt).width+32,tH=DS.TAG+14;
-  xc.fillStyle=th.tagBg;
-  rr(xc,(W-tW)/2,y,tW,tH,tH/2);xc.fill();
-  xc.fillStyle=th.tagTxt;xc.textAlign='center';
-  xc.fillText(tagTxt,W/2,y+tH*.7);
-  xc.letterSpacing='0';
-  y+=tH+DS.G32;
+  // EIXO TAG (skip if 'none', custom text if 'custom')
+  if(S.eixo!=='none'){
+    const tagTxt=(S.eixo==='custom'?(S.eixoCustom||'Custom').toUpperCase():S.eixo.toUpperCase());
+    xc.font='700 '+DS.TAG+'px "Space Grotesk"';
+    xc.letterSpacing='0.2em';
+    const tW=xc.measureText(tagTxt).width+32,tH=DS.TAG+14;
+    xc.fillStyle=th.tagBg;
+    rr(xc,(W-tW)/2,y,tW,tH,tH/2);xc.fill();
+    xc.fillStyle=th.tagTxt;xc.textAlign='center';
+    xc.fillText(tagTxt,W/2,y+tH*.7);
+    xc.letterSpacing='0';
+    y+=tH+G.tagHL;
+  }
 
   // HEADLINE
   const hlSz=isStory?DS.HL_STORY:(S.fmt==='square'?DS.HL_SQ:DS.HL_FEED);
@@ -356,15 +416,15 @@ function drawSlide(idx,xc,W,H){
     y+=Math.round(hlSz*0.12);
   });
   xc.letterSpacing='0';
-  y+=DS.G24;
+  y+=G.hlSep;
 
   // SEPARATOR
   xc.strokeStyle=th.sep;xc.lineWidth=1.5;
   const si=P+56;
   xc.beginPath();xc.moveTo(si,y);xc.lineTo(W-si,y);xc.stroke();
-  y+=1+DS.G24;
+  y+=1+G.sepSub;
 
-  // SUBTITULO (fibonacci scale: 21/28/34/44)
+  // SUBTITULO
   const subSz=S.subSize;
   xc.font='500 '+subSz+'px "Space Grotesk"';
   xc.fillStyle=th.sub;xc.textAlign='center';
@@ -373,7 +433,7 @@ function drawSlide(idx,xc,W,H){
     y+=subSz;xc.fillText(line,W/2,y);
     y+=Math.round(subSz*0.6);
   });
-  y+=DS.G24;
+  y+=G.subMicro;
 
   // MICRO BOX
   if(sl.m&&sl.m.trim()){
@@ -388,6 +448,14 @@ function drawSlide(idx,xc,W,H){
     mL.forEach(l=>{xc.fillText(l,W/2,my);my+=mSz*1.5;});
     y+=mH+DS.G16;
   }
+
+  // OVERLAY IMAGES (logos de clientes, fotos etc.)
+  S.overlays.forEach(ov=>{
+    if(!ov.img||!ov.img.complete||!ov.img.naturalHeight)return;
+    xc.save();xc.globalAlpha=ov.opacity??1;
+    xc.drawImage(ov.img,Math.round(ov.x*W),Math.round(ov.y*H),Math.round(ov.w*W),Math.round(ov.w*W*(ov.img.naturalHeight/ov.img.naturalWidth)));
+    xc.restore();
+  });
 
   // FOOTER
   const fY=H-Math.round(P*.7);
@@ -421,7 +489,12 @@ function next(){S.cur=(S.cur+1)%S.slides.length;render();}
 function grp(g,el){document.querySelectorAll('[data-g='+g+']').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function setFmt(f,el){S.fmt=f;grp('fmt',el);render();}
 function setTheme(t,el){S.theme=t;grp('theme',el);render();}
-function setEixo(e,el){S.eixo=e;grp('eixo',el);render();}
+function setEixo(e,el){
+  S.eixo=e;grp('eixo',el);
+  const cw=document.getElementById('eixo-custom-wrap');
+  if(cw)cw.style.display=(e==='custom'?'block':'none');
+  render();
+}
 function setSub(n,el){S.subSize=n;grp('sub',el);render();}
 function setArea(a,el){
   grp('atab',el);
@@ -430,6 +503,66 @@ function setArea(a,el){
   if(a==='anim')setupAnimCanvas();
 }
 function setAtype(t,el){S.animType=t;grp('atype',el);}
+
+// BG IMAGE
+function loadBgImg(inp){
+  if(!inp.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const i=new Image();
+    i.onload=()=>{S.bgImg=i;document.getElementById('bg-opacity-wrap').style.display='block';render();};
+    i.src=e.target.result;
+  };
+  r.readAsDataURL(inp.files[0]);
+  inp.value='';
+}
+
+// OVERLAY IMAGES
+let _ovId=0;
+function addOverlay(inp){
+  if(!inp.files[0])return;
+  const r=new FileReader();
+  const name=inp.files[0].name.replace(/\.[^.]+$/,'');
+  r.onload=e=>{
+    const i=new Image();
+    i.onload=()=>{
+      const id=++_ovId;
+      S.overlays.push({id,img:i,name,x:0.1,y:0.1,w:0.3,opacity:1});
+      buildOverlayList();render();
+    };
+    i.src=e.target.result;
+  };
+  r.readAsDataURL(inp.files[0]);
+  inp.value='';
+}
+
+function buildOverlayList(){
+  const el=document.getElementById('overlays-list');
+  if(!el)return;
+  if(!S.overlays.length){el.innerHTML='';return;}
+  el.innerHTML=S.overlays.map((ov,i)=>
+    '<div style="background:#f9fafb;border:1px solid #e2e4ea;border-radius:6px;padding:8px;margin-bottom:6px">'+
+    '<div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:6px">'+ov.name+'</div>'+
+    '<div class="fg"><label class="fl">X <span id="lv-ox'+ov.id+'">'+Math.round(ov.x*100)+'</span>%</label>'+
+    '<input type="range" min="0" max="90" value="'+Math.round(ov.x*100)+'" oninput="updOv('+i+',\'x\',this.value/100,\'lv-ox'+ov.id+'\')"></div>'+
+    '<div class="fg"><label class="fl">Y <span id="lv-oy'+ov.id+'">'+Math.round(ov.y*100)+'</span>%</label>'+
+    '<input type="range" min="0" max="90" value="'+Math.round(ov.y*100)+'" oninput="updOv('+i+',\'y\',this.value/100,\'lv-oy'+ov.id+'\')"></div>'+
+    '<div class="fg"><label class="fl">Tamanho <span id="lv-ow'+ov.id+'">'+Math.round(ov.w*100)+'</span>%</label>'+
+    '<input type="range" min="5" max="80" value="'+Math.round(ov.w*100)+'" oninput="updOv('+i+',\'w\',this.value/100,\'lv-ow'+ov.id+'\')"></div>'+
+    '<div class="fg"><label class="fl">Opacidade <span id="lv-oo'+ov.id+'">'+Math.round(ov.opacity*100)+'</span>%</label>'+
+    '<input type="range" min="10" max="100" value="'+Math.round(ov.opacity*100)+'" oninput="updOv('+i+',\'opacity\',this.value/100,\'lv-oo'+ov.id+'\')"></div>'+
+    '<button class="rm-btn" onclick="rmOv('+i+')">Remover</button>'+
+    '</div>'
+  ).join('');
+}
+
+function updOv(i,f,v,lbl){
+  S.overlays[i][f]=v;
+  const el=document.getElementById(lbl);
+  if(el)el.textContent=Math.round(v*100);
+  render();
+}
+function rmOv(i){S.overlays.splice(i,1);buildOverlayList();render();}
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function buildFields(){
