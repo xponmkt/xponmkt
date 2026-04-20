@@ -335,7 +335,7 @@ function drawSlide(idx,xc,W,H){
 
   // EIXO TAG
   const tagTxt=S.eixo.toUpperCase();
-  xc.font='700 '+DS.TAG+'px 'Space Grotesk'';
+  xc.font='700 '+DS.TAG+'px "Space Grotesk"';
   xc.letterSpacing='0.2em';
   const tW=xc.measureText(tagTxt).width+32,tH=DS.TAG+14;
   xc.fillStyle=th.tagBg;
@@ -347,7 +347,7 @@ function drawSlide(idx,xc,W,H){
 
   // HEADLINE
   const hlSz=isStory?DS.HL_STORY:(S.fmt==='square'?DS.HL_SQ:DS.HL_FEED);
-  xc.font='700 '+hlSz+'px 'Disket Mono'';
+  xc.font='700 '+hlSz+'px "Disket Mono"';
   xc.letterSpacing='-0.02em';
   xc.fillStyle=th.txt;xc.textAlign='center';
   const hlL=wrap(xc,sl.h.toUpperCase(),W-P*2-16);
@@ -366,7 +366,7 @@ function drawSlide(idx,xc,W,H){
 
   // SUBTITULO (fibonacci scale: 21/28/34/44)
   const subSz=S.subSize;
-  xc.font='500 '+subSz+'px 'Space Grotesk'';
+  xc.font='500 '+subSz+'px "Space Grotesk"';
   xc.fillStyle=th.sub;xc.textAlign='center';
   const subL=wrap(xc,sl.b,W-P*2-32);
   subL.forEach(line=>{
@@ -378,7 +378,7 @@ function drawSlide(idx,xc,W,H){
   // MICRO BOX
   if(sl.m&&sl.m.trim()){
     const mSz=18;
-    xc.font='500 '+mSz+'px 'Space Grotesk'';
+    xc.font='500 '+mSz+'px "Space Grotesk"';
     const mL=wrap(xc,sl.m,W-P*2-40);
     const mH=mL.length*mSz*1.5+DS.G16*2;
     xc.strokeStyle=th.sep;xc.lineWidth=1.5;
@@ -395,11 +395,11 @@ function drawSlide(idx,xc,W,H){
   const sH=30,sW=Math.round(sH*(284.61/234.92));
   if(sym&&sym.complete&&sym.naturalHeight>0)
     xc.drawImage(sym,P,fY-sH,sW,sH);
-  xc.font='600 '+DS.FOOT+'px 'Space Grotesk'';
+  xc.font='600 '+DS.FOOT+'px "Space Grotesk"';
   xc.letterSpacing='0.02em';
   xc.fillStyle=th.foot;xc.textAlign='right';
   xc.fillText('Intelligent collaboration services',W-P,fY);
-  xc.font='700 '+DS.FOOT+'px 'Disket Mono'';
+  xc.font='700 '+DS.FOOT+'px "Disket Mono"';
   xc.fillStyle=th.foot;xc.textAlign='center';
   const sn=String(idx+1).padStart(2,'0')+' / '+String(S.slides.length).padStart(2,'0');
   xc.fillText(sn,W/2,fY);
@@ -445,11 +445,11 @@ function buildFields(){
   const sl=S.slides[S.cur];
   document.getElementById('sfields').innerHTML=
     '<div class="fg"><label class="fl">Headline</label>'+
-    '<input type="text" value="'+esc(sl.h)+'" oninput="upd('h',this.value)"></div>'+
+    '<input type="text" data-f="h" value="'+esc(sl.h)+'" oninput="upd(this.dataset.f,this.value)"></div>'+
     '<div class="fg"><label class="fl">Subtitulo</label>'+
-    '<textarea oninput="upd('b',this.value)">'+esc(sl.b)+'</textarea></div>'+
+    '<textarea data-f="b" oninput="upd(this.dataset.f,this.value)">'+esc(sl.b)+'</textarea></div>'+
     '<div class="fg"><label class="fl">Micro texto</label>'+
-    '<input type="text" value="'+esc(sl.m||'')+'" placeholder="email, URL, dado..." oninput="upd('m',this.value)"></div>'+
+    '<input type="text" data-f="m" value="'+esc(sl.m||'')+'" placeholder="email, URL, dado..." oninput="upd(this.dataset.f,this.value)"></div>'+
     (S.slides.length>1?'<button class="rm-btn" onclick="rmSlide()">Remover slide '+(S.cur+1)+'</button>':'');
 }
 function upd(f,v){S.slides[S.cur][f]=v;render();}
